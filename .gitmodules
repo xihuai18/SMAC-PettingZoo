@@ -1,6 +1,0 @@
-[submodule "smacv1"]
-	path = smac_pettingzoo/smacv1
-	url = https://github.com/oxwhirl/smac.git
-[submodule "smacv2"]
-	path = smac_pettingzoo/smacv2
-	url = https://github.com/oxwhirl/smacv2.git
