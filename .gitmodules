@@ -1,0 +1,6 @@
+[submodule "smacv1"]
+	path = smacv1
+	url = https://github.com/oxwhirl/smac.git
+[submodule "smacv2"]
+	path = smacv2
+	url = https://github.com/oxwhirl/smacv2.git
