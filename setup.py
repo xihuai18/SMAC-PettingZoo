@@ -25,7 +25,7 @@ update_submodules()
 description = """SMAC-PettingZoo - Latest StarCraft Multi-Agent Challenge. The origin environment can be found at https://github.com/oxwhirl/smac.git and https://github.com/oxwhirl/smacv2.git."""
 
 setup(
-    name="SMAC-PettingZoo",
+    name="smac_pettingzoo",
     version="1.0.0",
     description="SMAC-PettingZoo - Latest StarCraft Multi-Agent Challenge",
     long_description=description,
@@ -39,5 +39,7 @@ setup(
         "absl-py>=0.1.0",
         "numpy>=1.10",
         "pygame>=2.0.0",
+        "pettingzoo",
+        "gymnasium",
     ],
 )
