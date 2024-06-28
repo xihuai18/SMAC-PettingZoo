@@ -70,7 +70,7 @@ class ParallelEnv(co_mas.env.ParallelEnv):
             self.agents.append(f"{agent_type}_{agent_type_count[agent_type]}")
             agent_type_count[agent_type] += 1
 
-        logger.debug(f"Agents in SMACv1: {self.agents}")
+        logger.trace(f"Agents in SMACv1: {self.agents}")
 
         self.possible_agents = self.agents[:]
         self.agents_to_agent_ids = {agent: agent_id for agent_id, agent in enumerate(self.possible_agents)}
@@ -108,23 +108,29 @@ class ParallelEnv(co_mas.env.ParallelEnv):
 
     def step(self, actions: Dict) -> Tuple[Dict, Dict, Dict, Dict, Dict]:
         # no-op, stop, move * 4, attack * n_enemies or heal * n_allies
-        _actions = [0 for _ in range(self.num_agents)]
+        _actions = [0 for _ in range(self.max_num_agents)]
         for agent, action in actions.items():
             _actions[self.agents_to_agent_ids[agent]] = action
         _observations, _states, _rewards, _terminations, _infos, _action_masks = self._env.step(_actions)
-        observations = {agent: obs for agent, obs in zip(self.agents, _observations)}
-        self.states = {agent: state for agent, state in zip(self.agents, _states)}
-        rewards = {agent: reward for agent, reward in zip(self.agents, _rewards)}
-        terminations = {agent: termination for agent, termination in zip(self.agents, _terminations)}
+        observations = {agent: obs for agent, obs in zip(self.possible_agents, _observations) if agent in self.agents}
+        self.states = {agent: state for agent, state in zip(self.possible_agents, _states) if agent in self.agents}
+        rewards = {agent: reward for agent, reward in zip(self.possible_agents, _rewards) if agent in self.agents}
+        terminations = {
+            agent: termination
+            for agent, termination in zip(self.possible_agents, _terminations)
+            if agent in self.agents
+        }
         truncations = {}
-        for agent, _info in zip(self.agents, _infos):
-            truncations[agent] = _info.pop("truncation", False)
+        for agent, _info in zip(self.possible_agents, _infos):
+            if agent in self.agents:
+                truncations[agent] = _info.pop("bad_transitions", False)
         infos = {
             agent: {
                 "action_mask": action_mask,
                 **info,
             }
-            for agent, action_mask, info in zip(self.agents, _action_masks, _infos)
+            for agent, action_mask, info in zip(self.possible_agents, _action_masks, _infos)
+            if agent in self.agents
         }
 
         self.agents = [agent for agent in self.agents if (not terminations[agent] and not truncations[agent])]
@@ -139,7 +145,7 @@ def parallel_env(
     map_name: str,
     smacv1_env_args: dict,
     additional_wrappers: List[Type[pettingzoo.utils.BaseParallelWrapper]] = [],
-) -> pettingzoo.utils.ParallelEnv:
+) -> ParallelEnv:
     env = ParallelEnv(map_name, smacv1_env_args)
     for wrapper in additional_wrappers:
         if issubclass(wrapper, pettingzoo.utils.BaseParallelWrapper):

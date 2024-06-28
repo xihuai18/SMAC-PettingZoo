@@ -24,5 +24,6 @@ setup(
         "pre-commit",
         "smac @ git+https://github.com/oxwhirl/smac.git",
         "smacv2 @ git+https://github.com/oxwhirl/smacv2.git",
+        "loguru",
     ],
 )
