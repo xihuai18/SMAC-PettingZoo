@@ -11,7 +11,7 @@ from operator import attrgetter
 from typing import Dict, List
 from warnings import warn
 
-import gymnasium as gym
+import gymnasium.spaces as gspaces
 import numpy as np
 from absl import logging
 from pysc2 import maps, run_configs
@@ -85,7 +85,7 @@ class SMACv2Env:
         self.n_agents = self.env.n_agents
 
         for _ in range(self.env.n_agents):
-            self.action_space.append(gym.spaces.Discrete(self.env.n_actions))
+            self.action_space.append(gspaces.Discrete(self.env.n_actions))
             self.observation_space.append(self.env.get_obs_size())
             self.share_observation_space.append(self.env.get_state_size())
 

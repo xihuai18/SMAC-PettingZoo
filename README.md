@@ -7,3 +7,4 @@ Note that we include the modifications of SMAC and SMACv2 in [MAPPO](https://git
 **Modifications in Game Mechanism**
 
 - **Suppressing Annoying outputs from PySC2.**
+- Fully control the randomness in SMACv2.

@@ -4,8 +4,8 @@ from loguru import logger
 from smac_pettingzoo import smacv2_pettingzoo_v1
 
 env = smacv2_pettingzoo_v1.parallel_env("10gen_terran_10_vs_10")
-
-while True:
+ep_i = 0
+while True and ep_i < 20:
     obs, info = env.reset(seed=42)
     step = 0
     while True:
@@ -16,6 +16,7 @@ while True:
         if len(env.agents) <= 0:
             logger.debug(f"step {step}, terminated: {terminated} truncated: {truncated}")
             break
+    ep_i += 1
     if any(truncated.values()):
         break
 env.close()

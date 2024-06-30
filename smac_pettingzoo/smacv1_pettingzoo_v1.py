@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Type
 
 import co_mas
-import gymnasium as gym
+import gymnasium.spaces as gspaces
 import numpy as np
 import pettingzoo
 import pettingzoo.utils
@@ -25,14 +25,12 @@ class ParallelEnv(co_mas.env.ParallelEnv):
         self._init_agents()
 
         self.observation_spaces = {
-            agent: gym.spaces.Box(low=-1, high=1, shape=(self._env.observation_space[agent_i][0],), dtype=np.float32)
+            agent: gspaces.Box(low=-1, high=1, shape=(self._env.observation_space[agent_i][0],), dtype=np.float32)
             for agent_i, agent in enumerate(self.agents)
         }
         self.action_spaces = {agent: self._env.action_space[agent_i] for agent_i, agent in enumerate(self.agents)}
         self.state_spaces = {
-            agent: gym.spaces.Box(
-                low=-1, high=1, shape=(self._env.share_observation_space[agent_i][0],), dtype=np.float32
-            )
+            agent: gspaces.Box(low=-1, high=1, shape=(self._env.share_observation_space[agent_i][0],), dtype=np.float32)
             for agent_i, agent in enumerate(self.agents)
         }
 
@@ -75,13 +73,13 @@ class ParallelEnv(co_mas.env.ParallelEnv):
         self.possible_agents = self.agents[:]
         self.agents_to_agent_ids = {agent: agent_id for agent_id, agent in enumerate(self.possible_agents)}
 
-    def observation_space(self, agent: Any) -> gym.Space:
+    def observation_space(self, agent: Any) -> gspaces.Space:
         return self.observation_spaces[agent]
 
-    def action_space(self, agent: Any) -> gym.Space:
+    def action_space(self, agent: Any) -> gspaces.Space:
         return self.action_spaces[agent]
 
-    def state_space(self, agent: Any) -> gym.Space:
+    def state_space(self, agent: Any) -> gspaces.Space:
         return self.state_spaces[agent]
 
     def state(self) -> Dict:
