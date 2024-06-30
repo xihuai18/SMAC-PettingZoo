@@ -8,7 +8,7 @@ import pettingzoo
 import pettingzoo.utils
 from loguru import logger
 
-from smac_pettingzoo.env.smacv1 import SMACV1Env
+from smac_pettingzoo.env.smacv1 import SMACv1Env
 
 
 class ParallelEnv(co_mas.env.ParallelEnv):
@@ -19,7 +19,7 @@ class ParallelEnv(co_mas.env.ParallelEnv):
     metadata = {}
 
     def __init__(self, map_name: str, smacv1_env_args: dict = {}):
-        self._env = SMACV1Env(map_name, **smacv1_env_args)
+        self._env = SMACv1Env(map_name, **smacv1_env_args)
         # NOTE: To obtain agent infos, should be reset again.
         self._env.reset(0)
         self._init_agents()
@@ -123,7 +123,7 @@ class ParallelEnv(co_mas.env.ParallelEnv):
         truncations = {}
         for agent, _info in zip(self.possible_agents, _infos):
             if agent in self.agents:
-                truncations[agent] = _info.pop("bad_transitions", False)
+                truncations[agent] = _info.pop("truncation", False)
         infos = {
             agent: {
                 "action_mask": action_mask,
@@ -143,7 +143,7 @@ class ParallelEnv(co_mas.env.ParallelEnv):
 
 def parallel_env(
     map_name: str,
-    smacv1_env_args: dict,
+    smacv1_env_args: dict = {},
     additional_wrappers: List[Type[pettingzoo.utils.BaseParallelWrapper]] = [],
 ) -> ParallelEnv:
     env = ParallelEnv(map_name, smacv1_env_args)

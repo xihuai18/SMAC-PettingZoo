@@ -1,9 +1,9 @@
 from co_mas.test import parallel_api_test, sample_action
 from loguru import logger
 
-from smac_pettingzoo import smacv1_pettingzoo_v1
+from smac_pettingzoo import smacv2_pettingzoo_v1
 
-env = smacv1_pettingzoo_v1.parallel_env("8m", {})
+env = smacv2_pettingzoo_v1.parallel_env("10gen_terran_10_vs_10")
 
 while True:
     obs, info = env.reset(seed=42)
@@ -20,26 +20,27 @@ while True:
         break
 env.close()
 
-parallel_api_test(env, 400)
+parallel_api_test(env, 200)
 
 # Seed Tests
-env1 = smacv1_pettingzoo_v1.parallel_env("8m", {})
+env1 = smacv2_pettingzoo_v1.parallel_env("10gen_terran_10_vs_10")
 obs1_list = []
 obs1, info1 = env1.reset(seed=42)
 obs1_list.append(obs1)
 
 while True:
-    obs1, _, terminated1, _, info1 = env1.step(
+    obs1, _, terminated1, truncated1, info1 = env1.step(
         {agent: sample_action(env1, obs1, agent, info1) for agent in env1.agents}
     )
     obs1_list.append(obs1)
+    logger.trace(f"{env1.agents}")
 
-    if any(terminated1.values()):
+    if len(env1.agents) <= 0:
         break
 
 env1.close()
 
-env2 = smacv1_pettingzoo_v1.parallel_env("8m", {})
+env2 = smacv2_pettingzoo_v1.parallel_env("10gen_terran_10_vs_10")
 
 obs2_list = []
 obs2, info2 = env2.reset(seed=42)
@@ -51,7 +52,7 @@ while True:
     )
     obs2_list.append(obs2)
 
-    if any(terminated2.values()):
+    if len(env2.agents) <= 0:
         break
 
 for i, (obs1, obs2) in enumerate(zip(obs1_list, obs2_list)):
@@ -66,8 +67,8 @@ env2.close()
 # Wrapper Tests
 from co_mas.wrappers import AutoResetParallelEnvWrapper, OrderForcingParallelEnvWrapper
 
-env = smacv1_pettingzoo_v1.parallel_env(
-    "8m", {}, additional_wrappers=[OrderForcingParallelEnvWrapper, AutoResetParallelEnvWrapper]
+env = smacv2_pettingzoo_v1.parallel_env(
+    "10gen_terran_10_vs_10", additional_wrappers=[OrderForcingParallelEnvWrapper, AutoResetParallelEnvWrapper]
 )
 
 obs, info = env.reset(seed=42)
@@ -75,7 +76,7 @@ obs, info = env.reset(seed=42)
 while True:
     obs, _, terminated, _, info = env.step({agent: sample_action(env, obs, agent, info) for agent in env.agents})
 
-    if all(terminated.values()):
+    if len(env.agents) <= 0:
         break
 
 obs, _, terminated, _, info = env.step({agent: sample_action(env, obs, agent, info) for agent in env.agents})

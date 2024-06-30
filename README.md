@@ -6,4 +6,4 @@ Note that we include the modifications of SMAC and SMACv2 in [MAPPO](https://git
 
 **Modifications in Game Mechanism**
 
-- Suppressing Annoying Outputs from PySC2.
+- **Suppressing Annoying outputs from PySC2.**

@@ -8,6 +8,7 @@ import subprocess
 from contextlib import contextmanager
 from copy import deepcopy
 from operator import attrgetter
+from typing import List
 
 import numpy as np
 from absl import logging
@@ -55,7 +56,7 @@ class Direction(enum.IntEnum):
     WEST = 3
 
 
-class SMACV1Env:
+class SMACv1Env:
     def __init__(
         self,
         map_name: str,
@@ -310,6 +311,10 @@ class SMACV1Env:
         """Reset the environment. Required after each full episode.
         Returns initial observations and states.
         """
+        if seed is None:
+            seed = np.random.randint(0, 1000000)
+        self.seed(seed)
+        self._episode_steps = 0
 
         @contextmanager
         def suppress_output():
@@ -336,10 +341,6 @@ class SMACV1Env:
                 os.close(old_stdout_fd)
                 os.close(old_stderr_fd)
 
-        if seed is None:
-            seed = np.random.randint(0, 1000000)
-        self.seed(seed)
-        self._episode_steps = 0
         # Use the context manager to suppress output
         with suppress_output():
             if self._episode_count == 0:
@@ -412,11 +413,11 @@ class SMACV1Env:
         self._launch()
         self.force_restarts += 1
 
-    def step(self, actions):
+    def step(self, actions: List[int]):
         """A single environment step. Returns reward, terminated, info."""
         terminated = False
-        bad_transition = False
-        infos = [{} for i in range(self.n_agents)]
+        truncation = False
+        infos = [{} for _ in range(self.n_agents)]
         dones = np.zeros((self.n_agents), dtype=bool)
 
         actions_int = [int(a) for a in actions]
@@ -456,7 +457,7 @@ class SMACV1Env:
                     "battles_game": self.battles_game,
                     "battles_draw": self.timeouts,
                     "restarts": self.force_restarts,
-                    "bad_transition": bad_transition,
+                    "truncation": truncation,
                     "won": self.win_counted,
                 }
                 if terminated:
@@ -486,7 +487,7 @@ class SMACV1Env:
                 local_obs = self.stacked_local_obs.reshape(self.n_agents, -1)
                 global_state = self.stacked_global_state.reshape(self.n_agents, -1)
 
-            return local_obs, global_state, [[0]] * self.n_agents, dones, infos, available_actions
+            return local_obs, global_state, [0] * self.n_agents, dones, infos, available_actions
 
         self._total_steps += 1
         self._episode_steps += 1
@@ -521,7 +522,7 @@ class SMACV1Env:
         elif self._episode_steps >= self.episode_limit:
             # Episode limit reached
             terminated = True
-            bad_transition = True
+            truncation = True
             self.battles_game += 1
             self.timeouts += 1
 
@@ -531,7 +532,7 @@ class SMACV1Env:
                 "battles_game": self.battles_game,
                 "battles_draw": self.timeouts,
                 "restarts": self.force_restarts,
-                "bad_transition": bad_transition,
+                "truncation": truncation,
                 "won": self.win_counted,
             }
 
@@ -552,12 +553,13 @@ class SMACV1Env:
         if self.reward_scale:
             reward /= self.max_reward / self.reward_scale_rate
 
-        rewards = [[reward]] * self.n_agents
+        rewards = [reward] * self.n_agents
 
-        if self.use_state_agent:
-            global_state = [self.get_state_agent(agent_id) for agent_id in range(self.n_agents)]
-        else:
-            global_state = [self.get_state(agent_id) for agent_id in range(self.n_agents)]
+        # if self.use_state_agent:
+        #     global_state = [self.get_state_agent(agent_id) for agent_id in range(self.n_agents)]
+        # else:
+        #     global_state = [self.get_state(agent_id) for agent_id in range(self.n_agents)]
+        global_state = [self.get_global_state(agent_id) for agent_id in range(self.n_agents)]
 
         local_obs = self.get_obs()
 
