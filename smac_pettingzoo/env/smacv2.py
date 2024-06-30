@@ -21,9 +21,9 @@ from s2clientprotocol import common_pb2 as sc_common
 from s2clientprotocol import debug_pb2 as d_pb
 from s2clientprotocol import raw_pb2 as r_pb
 from s2clientprotocol import sc2api_pb2 as sc_pb
-from smacv2.env.starcraft2.maps import get_map_params
 
-from smac_pettingzoo.env.smacv2_utils import get_distribution
+from smac_pettingzoo.env.smacv2_distributions import get_distribution
+from smac_pettingzoo.env.smacv2_maps import get_map_params
 
 races = {
     "R": sc_common.Random,
