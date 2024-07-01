@@ -53,11 +53,12 @@ class ParallelEnv(co_mas.env.ParallelEnv):
                 _n_enemies,
             ), f"map_units {map_units} is not consistent with map_name {map_name}"
         _capability_config = self._parse_capability_config(_map_type, _n_agents, _n_enemies)
-        assert (
+        assert capability_config is None or (
             capability_config.get("n_units", _n_agents) == _n_agents
             and capability_config.get("n_enemies", _n_enemies) == _n_enemies
         ), "num of units should be consistent"
-        _capability_config = _capability_config | capability_config
+        if capability_config is not None:
+            _capability_config = _capability_config | capability_config
 
         self._env = SMACv2Env(f"10gen_{_map_type}", capability_config=_capability_config, **smacv2_env_args)
         # NOTE: To obtain agent infos, should be reset again.
