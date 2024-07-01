@@ -21,7 +21,6 @@ class ParallelEnv(co_mas.env.ParallelEnv):
     def __init__(
         self,
         map_name: str,
-        map_type: str = None,
         map_units: Tuple[int, int] = None,
         capability_config: Dict = None,
         smacv2_env_args: Dict = {},
@@ -45,9 +44,6 @@ class ParallelEnv(co_mas.env.ParallelEnv):
             _n_enemies = map_units[1]
         else:
             _map_type, _n_agents, _n_enemies = self._parse_map_name(map_name)
-            assert (
-                map_type is None or map_type == _map_type
-            ), f"map_type {map_type} is not consistent with map_name {map_name}"
             assert map_units is None or map_units == (
                 _n_agents,
                 _n_enemies,
@@ -232,13 +228,12 @@ class ParallelEnv(co_mas.env.ParallelEnv):
 
 def parallel_env(
     map_name: str,
-    map_type: str = None,
     map_units: Tuple[int, int] = None,
     capability_config: Dict = None,
     smacv2_env_args: dict = {},
     additional_wrappers: List[Type[pettingzoo.utils.BaseParallelWrapper]] = [],
 ) -> ParallelEnv:
-    env = ParallelEnv(map_name, map_type, map_units, capability_config, smacv2_env_args)
+    env = ParallelEnv(map_name, map_units, capability_config, smacv2_env_args)
     for wrapper in additional_wrappers:
         if issubclass(wrapper, pettingzoo.utils.BaseParallelWrapper):
             env = wrapper(env)
