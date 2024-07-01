@@ -33,19 +33,24 @@ class ParallelEnv(co_mas.env.ParallelEnv):
             Name of the map, should follow the SMACv2 map naming convention, e.g., 10gen_terran_10_vs_10.
             if `map_name` can be parsed, `map_type`, `map_units` and `capability_config` are optional.
         """
-        assert self._parse_map_name(map_name) is not None, f"Invalid map name: {map_name}"
-        _map_type, _n_agents, _n_enemies = self._parse_map_name(map_name)
-        assert (
-            map_type is None or map_type == _map_type
-        ), f"map_type {map_type} is not consistent with map_name {map_name}"
-        assert map_units is None or map_units == (
-            _n_agents,
-            _n_enemies,
-        ), f"map_units {map_units} is not consistent with map_name {map_name}"
+        assert self._parse_map_name(map_name) is not None or map_name in ["10gen_terran", "10gen_zerg", "10gen_protoss"], f"Invalid map name: {map_name}"
+        if map_name in ["10gen_terran", "10gen_zerg", "10gen_protoss"]:
+            _map_type = map_name[6:]
+            assert map_units is not None, f"map_unit can not be None"
+            _n_agents = map_units[0]
+            _n_enemies = map_units[1]
+        else:
+            _map_type, _n_agents, _n_enemies = self._parse_map_name(map_name)    
+            assert (
+                map_type is None or map_type == _map_type
+            ), f"map_type {map_type} is not consistent with map_name {map_name}"
+            assert map_units is None or map_units == (
+                _n_agents,
+                _n_enemies,
+            ), f"map_units {map_units} is not consistent with map_name {map_name}"
         _capability_config = self._parse_capability_config(_map_type, _n_agents, _n_enemies)
-        assert (
-            capability_config is None or capability_config == _capability_config
-        ), f"capability_config {capability_config} is not consistent with map_name"
+        assert capability_config.get("n_units", _n_agents) == _n_agents and capability_config.get("n_enemies", _n_enemies) == _n_enemies, "num of units should be consistent"
+        _capability_config = _capability_config | capability_config
 
         self._env = SMACv2Env(f"10gen_{_map_type}", capability_config=_capability_config, **smacv2_env_args)
         # NOTE: To obtain agent infos, should be reset again.
