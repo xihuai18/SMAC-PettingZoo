@@ -17,7 +17,7 @@ from co_mas.test import sample_action
 from smac_pettingzoo import smacv2_pettingzoo_v1, smacv1_pettingzoo_v1
 from loguru import logger
 
-env = smacv1_pettingzoo_v1.parallel_env("8m", {})
+env = smacv1_pettingzoo_v1.parallel_env("8m")
 obs, info = env.reset(seed=42)
 step = 0
 while True:
