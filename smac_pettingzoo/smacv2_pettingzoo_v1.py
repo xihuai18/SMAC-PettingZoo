@@ -231,9 +231,22 @@ def parallel_env(
     map_units: Tuple[int, int] = None,
     capability_config: Dict = None,
     smacv2_env_args: dict = {},
+    order_forcing: bool = True,
     additional_wrappers: List[Type[pettingzoo.utils.BaseParallelWrapper]] = [],
 ) -> ParallelEnv:
     env = ParallelEnv(map_name, map_units, capability_config, smacv2_env_args)
+    if hasattr(env, "state_space") and hasattr(env, "state"):
+        from co_mas.wrappers import AgentStateParallelEnvWrapper
+
+        env = AgentStateParallelEnvWrapper(env)
+
+    from co_mas.wrappers import OrderForcingParallelEnvWrapper
+
+    if order_forcing and not any(
+        issubclass(wrapper, OrderForcingParallelEnvWrapper) for wrapper in additional_wrappers
+    ):
+        env = OrderForcingParallelEnvWrapper(env)
+
     for wrapper in additional_wrappers:
         if issubclass(wrapper, pettingzoo.utils.BaseParallelWrapper):
             env = wrapper(env)
