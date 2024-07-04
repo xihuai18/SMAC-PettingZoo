@@ -235,10 +235,6 @@ def parallel_env(
     additional_wrappers: List[Type[pettingzoo.utils.BaseParallelWrapper]] = [],
 ) -> ParallelEnv:
     env = ParallelEnv(map_name, map_units, capability_config, smacv2_env_args)
-    if hasattr(env, "state_space") and hasattr(env, "state"):
-        from co_mas.wrappers import AgentStateParallelEnvWrapper
-
-        env = AgentStateParallelEnvWrapper(env)
 
     from co_mas.wrappers import OrderForcingParallelEnvWrapper
 

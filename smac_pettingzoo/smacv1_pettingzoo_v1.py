@@ -147,11 +147,6 @@ def parallel_env(
 ) -> ParallelEnv:
     env = ParallelEnv(map_name, smacv1_env_args)
 
-    if hasattr(env, "state_space") and hasattr(env, "state"):
-        from co_mas.wrappers import AgentStateParallelEnvWrapper
-
-        env = AgentStateParallelEnvWrapper(env)
-
     from co_mas.wrappers import OrderForcingParallelEnvWrapper
 
     if order_forcing and not any(
