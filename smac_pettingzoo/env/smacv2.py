@@ -2260,11 +2260,11 @@ class SMACv2EnvCore:
                     if can_shoot:
                         avail_actions[t_id + self.n_actions_no_attack] = 1
 
-            return avail_actions
+            return np.array(avail_actions)
 
         else:
             # only no-op allowed
-            return [1] + [0] * (self.n_actions - 1)
+            return np.array([1] + [0] * (self.n_actions - 1))
 
     def get_avail_actions(self):
         """Returns the available actions of all agents in a list."""

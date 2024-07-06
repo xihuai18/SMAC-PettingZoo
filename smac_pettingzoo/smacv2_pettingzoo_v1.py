@@ -223,7 +223,8 @@ class ParallelEnv(co_mas.env.ParallelEnv):
         return observations, rewards, terminations, truncations, infos
 
     def close(self):
-        self._env.close()
+        if hasattr(self, "_env") and self._env is not None:
+            self._env.close()
 
 
 def parallel_env(
