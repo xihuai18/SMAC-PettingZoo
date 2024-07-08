@@ -274,7 +274,7 @@ class SMACv2EnvCore:
 
         self.n_actions_no_attack = self.n_actions_move + self.n_fov_actions + 2
 
-        if map_params["map_type"] in ["MMM", "terran_gen"] and self.n_agents > self.n_enemies:
+        if map_params["map_type"] in ["terran_gen"] and self.n_agents > self.n_enemies:
             self.n_actions = self.n_actions_no_attack + self.n_agents
         else:
             self.n_actions = self.n_actions_no_attack + self.n_enemies
@@ -386,16 +386,16 @@ class SMACv2EnvCore:
         self._run_config = None
         self._sc2_proc = None
         self._controller = None
-        self._seed = None
-        self.version = None
         # Try to avoid leaking SC2 processes on shutdown
         atexit.register(self.close)
+
+        self._seed = None
 
     def _launch(self):
         """Launch the StarCraft II game."""
         self._run_config = run_configs.get(version=self.game_version)
-        self.version = self._run_config.version
         _map = maps.get(self.map_name)
+        self._seed += 1
 
         # Setting up the interface
         interface_options = sc_pb.InterfaceOptions(raw=True, score=False)
@@ -523,7 +523,7 @@ class SMACv2EnvCore:
         if self.debug:
             logging.debug(f"Attack Probabilities: {self.agent_attack_probabilities}")
             logging.debug(f"Health Levels: {self.agent_health_levels}")
-        self.last_action = np.zeros((self.n_agents, self.n_actions))
+        self.last_action = np.zeros((self.n_agents, self.n_actions), dtype=np.float32)
 
         if self.heuristic_ai:
             self.heuristic_targets = [None] * self.n_agents
@@ -541,7 +541,7 @@ class SMACv2EnvCore:
         if self.debug:
             logging.debug("Started Episode {}".format(self._episode_count).center(60, "*"))
 
-        global_state = np.array([self.get_global_state(agent_id) for agent_id in range(self.n_agents)])
+        global_state = [self.get_global_state(agent_id) for agent_id in range(self.n_agents)]
 
         local_obs = self.get_obs()
 
@@ -584,8 +584,8 @@ class SMACv2EnvCore:
 
     def step(self, actions: List[int]):
         """A single environment step. Returns observation, state, reward, dones, infos, avaiable_actions."""
-        terminated = False
-        truncated = False
+        termination = False
+        truncation = False
         infos = [{} for _ in range(self.n_agents)]
         dones = np.zeros((self.n_agents), dtype=bool)
 
@@ -606,6 +606,7 @@ class SMACv2EnvCore:
                 actions[a_id] = action_num
             if sc_action:
                 sc_actions.append(sc_action)
+
         # Send action request
         req_actions = sc_pb.RequestAction(actions=sc_actions)
 
@@ -624,7 +625,7 @@ class SMACv2EnvCore:
             self._obs = self._controller.observe()
         except (protocol.ProtocolError, protocol.ConnectionError):
             self.full_restart()
-            terminated = True
+            termination = True
             available_actions = []
             for i in range(self.n_agents):
                 available_actions.append(self.get_avail_agent_actions(i))
@@ -633,10 +634,10 @@ class SMACv2EnvCore:
                     "battles_game": self.battles_game,
                     "battles_draw": self.timeouts,
                     "restarts": self.force_restarts,
-                    "truncation": truncated,
+                    "truncation": truncation,
                     "won": self.win_counted,
                 }
-                if terminated:
+                if termination:
                     dones[i] = True
                 else:
                     if self.death_tracker_ally[i]:
@@ -686,7 +687,7 @@ class SMACv2EnvCore:
 
         if game_end_code is not None:
             # Battle is over
-            terminated = True
+            termination = True
             self.battles_game += 1
             if game_end_code == 1 and not self.win_counted:
                 self.battles_won += 1
@@ -704,20 +705,22 @@ class SMACv2EnvCore:
 
         elif self._episode_steps >= self.episode_limit:
             # Episode limit reached
-            terminated = True
-            truncated = True
+            termination = True
+            truncation = True
             self.battles_game += 1
             self.timeouts += 1
+
         for i in range(self.n_agents):
             infos[i] = {
                 "battles_won": self.battles_won,
                 "battles_game": self.battles_game,
                 "battles_draw": self.timeouts,
                 "restarts": self.force_restarts,
-                "truncation": truncated,
+                "truncation": truncation,
                 "won": self.win_counted,
             }
-            if terminated:
+
+            if termination:
                 dones[i] = True
             else:
                 if self.death_tracker_ally[i]:
@@ -728,7 +731,7 @@ class SMACv2EnvCore:
         if self.debug:
             logging.debug("Reward = {}".format(reward).center(60, "-"))
 
-        if terminated:
+        if termination:
             self._episode_count += 1
 
         if self.reward_scale:
@@ -836,7 +839,7 @@ class SMACv2EnvCore:
         else:
             # attack/heal units that are in range
             target_id = action - self.n_actions_no_attack
-            if self.map_type in ["MMM", "terran_gen"] and unit.unit_type == self.medivac_id:
+            if self.map_type in ["terran_gen"] and unit.unit_type == self.medivac_id:
                 target_unit = self.agents[target_id]
                 action_name = "heal"
             else:
@@ -1516,6 +1519,7 @@ class SMACv2EnvCore:
                 al_x = al_unit.pos.x
                 al_y = al_unit.pos.y
                 dist = self.distance(x, y, al_x, al_y)
+
                 ally_visible = self.is_position_in_cone(agent_id, al_unit.pos) if self.conic_fov else dist < sight_range
                 if (ally_visible and al_unit.health > 0) or (
                     al_unit.health > 0 and fully_observable
@@ -1554,6 +1558,7 @@ class SMACv2EnvCore:
                         type_id = self.get_unit_type_id(al_unit, True)
                         ally_feats[i, ind + type_id] = 1
                         ind += self.unit_type_bits
+
                     elif self.unit_type_bits > 0 and self.zero_pad_unit_types:
                         ind += self.unit_type_bits
                     if self.obs_last_action:
@@ -1720,7 +1725,7 @@ class SMACv2EnvCore:
                     ally_feats[i, 3] = (al_y - y) / sight_range  # relative Y
 
                     max_cd = self.unit_max_cooldown(al_unit)
-                    if self.map_type in ["MMM", "terran_gen"] and al_unit.unit_type == self.medivac_id:
+                    if self.map_type in ["terran_gen"] and al_unit.unit_type == self.medivac_id:
                         ally_feats[i, 4] = al_unit.energy / max_cd  # energy
                     else:
                         ally_feats[i, 4] = al_unit.weapon_cooldown / max_cd  # cooldown
@@ -1811,6 +1816,14 @@ class SMACv2EnvCore:
 
         if self.state_timestep_number:
             state = np.append(state, self._episode_steps / self.episode_limit)
+
+        if self.debug:
+            logging.debug("Obs Agent: {}".format(agent_id).center(60, "-"))
+            logging.debug("Avail. actions {}".format(self.get_avail_agent_actions(agent_id)))
+            logging.debug("Move feats {}".format(move_feats))
+            logging.debug("Enemy feats {}".format(enemy_feats))
+            logging.debug("Ally feats {}".format(ally_feats))
+            logging.debug("Own feats {}".format(own_feats))
 
         return state
 
@@ -1915,7 +1928,7 @@ class SMACv2EnvCore:
                     ally_state[al_id, 0] = al_unit.health / al_unit.health_max  # health
                 else:
                     ally_state[al_id, 0] = self._compute_health(al_id, al_unit)
-                if self.map_type in ["MMM", "terran_gen"] and al_unit.unit_type == self.medivac_id:
+                if self.map_type in ["terran_gen"] and al_unit.unit_type == self.medivac_id:
                     ally_state[al_id, 1] = al_unit.energy / max_cd  # energy
                 else:
                     ally_state[al_id, 1] = al_unit.weapon_cooldown / max_cd  # cooldown
@@ -2060,9 +2073,11 @@ class SMACv2EnvCore:
 
         agent_id_feats = 0
         timestep_feats = 0
+
         if self.obs_agent_id:
             agent_id_feats = self.n_agents
             all_feats += agent_id_feats
+
         if self.obs_timestep_number:
             timestep_feats = 1
             all_feats += timestep_feats
@@ -2081,7 +2096,9 @@ class SMACv2EnvCore:
             return self.get_obs_size()[0] * self.n_agents
 
         if self.use_state_agent:
+
             move_feats = self.get_obs_move_feats_size()
+
             own_feats = self.get_state_own_feats_size()
 
             n_enemy_feats = self.get_enemy_num_attributes()
@@ -2180,7 +2197,7 @@ class SMACv2EnvCore:
             if unit.unit_type in (self.colossus_id, Protoss.Colossus):
                 return 2
             raise AttributeError()
-        if self.map_type == "terran_gen":
+        elif self.map_type == "terran_gen":
             if unit.unit_type in (self.marine_id, Terran.Marine):
                 return 0
             if unit.unit_type in (self.marauder_id, Terran.Marauder):
@@ -2189,7 +2206,7 @@ class SMACv2EnvCore:
                 return 2
             raise AttributeError()
 
-        if self.map_type == "zerg_gen":
+        elif self.map_type == "zerg_gen":
             if unit.unit_type in (self.zergling_id, Zerg.Zergling):
                 return 0
             if unit.unit_type in (self.hydralisk_id, Zerg.Hydralisk):
@@ -2198,35 +2215,8 @@ class SMACv2EnvCore:
                 return 2
             raise AttributeError()
 
-        # Old stuff
-        if ally:  # use new SC2 unit types
-            type_id = unit.unit_type - self._min_unit_type
-
-        if self.map_type == "stalkers_and_zealots":
-            # id(Stalker) = 74, id(Zealot) = 73
-            type_id = unit.unit_type - 73
-        elif self.map_type == "colossi_stalkers_zealots":
-            # id(Stalker) = 74, id(Zealot) = 73, id(Colossus) = 4
-            if unit.unit_type == 4:
-                type_id = 0
-            elif unit.unit_type == 74:
-                type_id = 1
-            else:
-                type_id = 2
-        elif self.map_type == "bane":
-            if unit.unit_type == 9:
-                type_id = 0
-            else:
-                type_id = 1
-        elif self.map_type == "MMM":
-            if unit.unit_type == 51:
-                type_id = 0
-            elif unit.unit_type == 48:
-                type_id = 1
-            else:
-                type_id = 2
-
-        return type_id
+        else:
+            raise AttributeError()
 
     def get_avail_agent_actions(self, agent_id):
         """Returns the available actions for agent_id."""
@@ -2255,7 +2245,7 @@ class SMACv2EnvCore:
             shoot_range = self.unit_shoot_range(agent_id)
 
             target_items = self.enemies.items()
-            if self.map_type in ("MMM", "terran_gen") and unit.unit_type == self.medivac_id:
+            if self.map_type in ("terran_gen") and unit.unit_type == self.medivac_id:
                 # Medivacs cannot heal themselves or other flying units
                 target_items = [
                     (t_id, t_unit) for (t_id, t_unit) in self.agents.items() if t_unit.unit_type != self.medivac_id
@@ -2390,7 +2380,7 @@ class SMACv2EnvCore:
                 self._obs = self._controller.observe()
             except (protocol.ProtocolError, protocol.ConnectionError):
                 self.full_restart()
-                self.reset(episode_config=episode_config)
+                self.reset(self._seed, episode_config=episode_config)
         while True:
             # Sometimes not all units have yet been created by SC2
             self.agents = {}
@@ -2441,7 +2431,7 @@ class SMACv2EnvCore:
                 self._obs = self._controller.observe()
             except (protocol.ProtocolError, protocol.ConnectionError):
                 self.full_restart()
-                self.reset(episode_config=episode_config)
+                self.reset(self._seed, episode_config=episode_config)
 
     def get_unit_types(self):
         if self._unit_types is None:
@@ -2545,49 +2535,11 @@ class SMACv2EnvCore:
             }
 
         else:
-            if self.map_type == "marines":
-                self.marine_id = min_unit_type
-                self._register_unit_mapping("marine", min_unit_type)
-            elif self.map_type == "stalkers_and_zealots":
-                self.stalker_id = min_unit_type
-                self._register_unit_mapping("stalker", min_unit_type)
-                self.zealot_id = min_unit_type + 1
-                self._register_unit_mapping("zealot", min_unit_type + 1)
-            elif self.map_type == "colossi_stalkers_zealots":
-                self.colossus_id = min_unit_type
-                self._register_unit_mapping("colossus", min_unit_type)
-                self.stalker_id = min_unit_type + 1
-                self._register_unit_mapping("stalker", min_unit_type + 1)
-                self.zealot_id = min_unit_type + 2
-                self._register_unit_mapping("zealot", min_unit_type + 2)
-            elif self.map_type == "MMM":
-                self.marauder_id = min_unit_type
-                self._register_unit_mapping("marauder", min_unit_type)
-                self.marine_id = min_unit_type + 1
-                self._register_unit_mapping("marine", min_unit_type + 1)
-                self.medivac_id = min_unit_type + 2
-                self._register_unit_mapping("medivac", min_unit_type + 2)
-            elif self.map_type == "zealots":
-                self.zealot_id = min_unit_type
-                self._register_unit_mapping("zealot", min_unit_type)
-            elif self.map_type == "hydralisks":
-                self.hydralisk_id = min_unit_type
-                self._register_unit_mapping("hydralisk", min_unit_type)
-            elif self.map_type == "stalkers":
-                self.stalker_id = min_unit_type
-                self._register_unit_mapping("stalker", min_unit_type)
-            elif self.map_type == "colossus":
-                self.colossus_id = min_unit_type
-                self._register_unit_mapping("colossus", min_unit_type)
-            elif self.map_type == "bane":
-                self.baneling_id = min_unit_type
-                self._register_unit_mapping("baneling", min_unit_type)
-                self.zergling_id = min_unit_type + 1
-                self._register_unit_mapping("zergling", min_unit_type + 1)
+            raise AssertionError("Only V2 maps are supported.")
 
     def only_medivac_left(self, ally):
         """Check if only Medivac units are left."""
-        if self.map_type != "MMM" and self.map_type != "terran_gen":
+        if self.map_type != "terran_gen":
             return False
 
         if ally:

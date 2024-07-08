@@ -4,7 +4,7 @@ import atexit
 import enum
 import math
 import os
-import subprocess
+import random
 from contextlib import contextmanager
 from copy import deepcopy
 from operator import attrgetter
@@ -256,9 +256,7 @@ class SMACv1Env:
 
         # Setting up the interface
         interface_options = sc_pb.InterfaceOptions(raw=True, score=False)
-        self._sc2_proc = self._run_config.start(
-            window_size=self.window_size, want_rgb=False, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
-        )
+        self._sc2_proc = self._run_config.start(window_size=self.window_size, want_rgb=False)
         self._controller = self._sc2_proc.controller
 
         # Request to create the game
@@ -375,11 +373,6 @@ class SMACv1Env:
         if self.debug:
             logging.debug("Started Episode {}".format(self._episode_count).center(60, "*"))
 
-        # if self.use_state_agent:
-        #     global_state = [self.get_state_agent(agent_id) for agent_id in range(self.n_agents)]
-        # else:
-        #     global_state = [self.get_state(agent_id) for agent_id in range(self.n_agents)]
-
         global_state = [self.get_global_state(agent_id) for agent_id in range(self.n_agents)]
 
         local_obs = self.get_obs()
@@ -415,7 +408,7 @@ class SMACv1Env:
 
     def step(self, actions: List[int]):
         """A single environment step. Returns reward, terminated, info."""
-        terminated = False
+        termination = False
         truncation = False
         infos = [{} for _ in range(self.n_agents)]
         dones = np.zeros((self.n_agents), dtype=bool)
@@ -448,7 +441,7 @@ class SMACv1Env:
             self._obs = self._controller.observe()
         except (protocol.ProtocolError, protocol.ConnectionError):
             self.full_restart()
-            terminated = True
+            termination = True
             available_actions = []
             for i in range(self.n_agents):
                 available_actions.append(self.get_avail_agent_actions(i))
@@ -460,19 +453,13 @@ class SMACv1Env:
                     "truncation": truncation,
                     "won": self.win_counted,
                 }
-                if terminated:
+                if termination:
                     dones[i] = True
                 else:
                     if self.death_tracker_ally[i]:
                         dones[i] = True
                     else:
                         dones[i] = False
-
-            # if self.use_state_agent:
-            #     global_state = [self.get_state_agent(agent_id) for agent_id in range(self.n_agents)]
-            # else:
-            #     global_state = [self.get_state(agent_id) for agent_id in range(self.n_agents)]
-
             global_state = [self.get_global_state(agent_id) for agent_id in range(self.n_agents)]
 
             local_obs = self.get_obs()
@@ -503,7 +490,7 @@ class SMACv1Env:
 
         if game_end_code is not None:
             # Battle is over
-            terminated = True
+            termination = True
             self.battles_game += 1
             if game_end_code == 1 and not self.win_counted:
                 self.battles_won += 1
@@ -521,7 +508,7 @@ class SMACv1Env:
 
         elif self._episode_steps >= self.episode_limit:
             # Episode limit reached
-            terminated = True
+            termination = True
             truncation = True
             self.battles_game += 1
             self.timeouts += 1
@@ -536,7 +523,7 @@ class SMACv1Env:
                 "won": self.win_counted,
             }
 
-            if terminated:
+            if termination:
                 dones[i] = True
             else:
                 if self.death_tracker_ally[i]:
@@ -547,7 +534,7 @@ class SMACv1Env:
         if self.debug:
             logging.debug("Reward = {}".format(reward).center(60, "-"))
 
-        if terminated:
+        if termination:
             self._episode_count += 1
 
         if self.reward_scale:
@@ -713,7 +700,6 @@ class SMACv1Env:
 
         # Check if the action is available
         if self.heuristic_rest and self.get_avail_agent_actions(a_id)[action_num] == 0:
-
             # Move towards the target rather than attacking/healing
             if unit.unit_type == self.medivac_id:
                 target_unit = self.agents[self.heuristic_targets[a_id]]
@@ -1074,7 +1060,7 @@ class SMACv1Env:
 
     def get_state(self, agent_id=-1):
         """Returns the global state.
-        NOTE: This functon should not be used during decentralised execution.
+        NOTE: This function should not be used during decentralised execution.
         """
         if self.obs_instead_of_state:
             obs_concat = np.concatenate(self.get_obs(), axis=0).astype(np.float32)
@@ -1700,7 +1686,7 @@ class SMACv1Env:
 
                 # The matrix for allies is filled symmetrically
                 al_ids = [al_id for al_id in range(self.n_agents) if al_id > agent_id]
-                for i, al_id in enumerate(al_ids):
+                for _, al_id in enumerate(al_ids):
                     al_unit = self.get_unit_by_id(al_id)
                     al_x = al_unit.pos.x
                     al_y = al_unit.pos.y
@@ -1798,9 +1784,11 @@ class SMACv1Env:
         if self._sc2_proc:
             self._sc2_proc.close()
 
-    def seed(self, seed):
+    def seed(self, seed: int):
         """Returns the random seed used by the environment."""
         self._seed = seed
+        np.random.seed(seed)
+        random.seed(seed)
 
     def render(self):
         """Not implemented."""
