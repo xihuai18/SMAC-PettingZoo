@@ -623,6 +623,7 @@ class SMACv2EnvCore:
             # Observe here so that we know if the episode is over.
             self._obs = self._controller.observe()
         except (protocol.ProtocolError, protocol.ConnectionError):
+            self.full_restart()
             terminated = True
             available_actions = []
             for i in range(self.n_agents):
@@ -1446,6 +1447,7 @@ class SMACv2EnvCore:
         enemy_feats = np.zeros(enemy_feats_dim, dtype=np.float32)
         ally_feats = np.zeros(ally_feats_dim, dtype=np.float32)
         own_feats = np.zeros(own_feats_dim, dtype=np.float32)
+        agent_id_feats = np.zeros(self.n_agents, dtype=np.float32)
 
         if unit.health > 0 and self.obs_starcraft:  # otherwise dead, return all zeros
             x = unit.pos.x
@@ -1600,6 +1602,9 @@ class SMACv2EnvCore:
                     own_feats.flatten(),
                 )
             )
+            if self.obs_agent_id:
+                agent_id_feats[agent_id] = 1.0
+                agent_obs = np.concatenate((agent_obs, agent_id_feats.flatten()))
 
         if self.obs_timestep_number:
             if self.obs_starcraft:
@@ -1607,6 +1612,9 @@ class SMACv2EnvCore:
             else:
                 agent_obs = np.zeros(1, dtype=np.float32)
                 agent_obs[:] = self._episode_steps / self.episode_limit
+            if self.obs_agent_id:
+                agent_id_feats[agent_id] = 1.0
+                agent_obs = np.concatenate((agent_obs, agent_id_feats.flatten()))
 
         if self.debug:
             logging.debug("Obs Agent: {}".format(agent_id).center(60, "-"))
@@ -2050,17 +2058,21 @@ class SMACv2EnvCore:
 
         all_feats = move_feats + enemy_feats + ally_feats + own_feats
 
+        agent_id_feats = 0
         timestep_feats = 0
+        if self.obs_agent_id:
+            agent_id_feats = self.n_agents
+            all_feats += agent_id_feats
         if self.obs_timestep_number:
             timestep_feats = 1
             all_feats += timestep_feats
 
         return [
-            all_feats,
+            all_feats * self.stacked_frames if self.use_stacked_frames else all_feats,
             [n_allies, n_ally_feats],
             [n_enemies, n_enemy_feats],
             [1, move_feats],
-            [1, own_feats + timestep_feats],
+            [1, own_feats + agent_id_feats + timestep_feats],
         ]
 
     def get_state_size(self):
@@ -2095,7 +2107,7 @@ class SMACv2EnvCore:
                 all_feats += timestep_feats
 
             return [
-                all_feats,
+                all_feats * self.stacked_frames if self.use_stacked_frames else all_feats,
                 [n_allies, n_ally_feats],
                 [self.n_enemies, n_enemy_feats],
                 [1, move_feats],

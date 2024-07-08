@@ -793,7 +793,7 @@ class SMACv1Env:
                     delta_enemy += prev_health - e_unit.health - e_unit.shield
 
         if self.reward_only_positive:
-            reward = abs(delta_enemy + delta_deaths)  # shield regeneration
+            reward = max(delta_enemy + delta_deaths, 0)  # shield regeneration
         else:
             reward = delta_enemy + delta_deaths - delta_ally
 
