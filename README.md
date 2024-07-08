@@ -8,6 +8,7 @@ Note that we include the modifications of SMAC and SMACv2 in [MAPPO](https://git
 
 - **Suppressing Annoying outputs from PySC2.**
 - Fully control the randomness in SMACv2.
+- Fix SMACv1 reward hacking, following https://github.com/oxwhirl/smac/pull/76.
 
 
 ## Installation
