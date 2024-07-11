@@ -23,7 +23,7 @@ while True and ep_i < 20:
 
 env.close()
 
-parallel_api_test(env, 400)
+parallel_api_test(env, 400, agent_state=True)
 
 # Seed Tests
 env1 = smacv1_pettingzoo_v1.parallel_env("8m", {})
