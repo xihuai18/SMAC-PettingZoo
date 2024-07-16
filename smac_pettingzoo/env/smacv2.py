@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import atexit
 import enum
 import math
@@ -331,7 +329,7 @@ class SMACv2EnvCore:
         if "health" in self.capability_config:
             self.capability_attr_names += ["total_health"]
         if self.unit_type_bits > 0:
-            bit_attr_names = ["type_{}".format(bit) for bit in range(self.unit_type_bits)]
+            bit_attr_names = [f"type_{bit}" for bit in range(self.unit_type_bits)]
             self.capability_attr_names += bit_attr_names
             self.enemy_state_attr_names += bit_attr_names
 
@@ -539,7 +537,7 @@ class SMACv2EnvCore:
             available_actions.append(self.get_avail_agent_actions(i))
 
         if self.debug:
-            logging.debug("Started Episode {}".format(self._episode_count).center(60, "*"))
+            logging.debug(f"Started Episode {self._episode_count}".center(60, "*"))
 
         global_state = [self.get_global_state(agent_id) for agent_id in range(self.n_agents)]
 
@@ -729,7 +727,7 @@ class SMACv2EnvCore:
                     dones[i] = False
 
         if self.debug:
-            logging.debug("Reward = {}".format(reward).center(60, "-"))
+            logging.debug(f"Reward = {reward}".center(60, "-"))
 
         if termination:
             self._episode_count += 1
@@ -762,7 +760,7 @@ class SMACv2EnvCore:
     def get_agent_action(self, a_id, action):
         """Construct the action for agent a_id."""
         avail_actions = self.get_avail_agent_actions(a_id)
-        assert avail_actions[action] == 1, "Agent {} cannot perform action {}".format(a_id, action)
+        assert avail_actions[action] == 1, f"Agent {a_id} cannot perform action {action}"
 
         unit = self.get_unit_by_id(a_id)
         tag = unit.tag
@@ -773,7 +771,7 @@ class SMACv2EnvCore:
             # no-op (valid only when dead)
             assert unit.health == 0, "No-op only available for dead agents."
             if self.debug:
-                logging.debug("Agent {}: Dead".format(a_id))
+                logging.debug(f"Agent {a_id}: Dead")
             return None
         elif action == 1:
             # stop
@@ -783,7 +781,7 @@ class SMACv2EnvCore:
                 queue_command=False,
             )
             if self.debug:
-                logging.debug("Agent {}: Stop".format(a_id))
+                logging.debug(f"Agent {a_id}: Stop")
 
         elif action == 2:
             # move north
@@ -795,7 +793,7 @@ class SMACv2EnvCore:
             )
             self.new_unit_positions[a_id] = np.array([x, y + self._move_amount])
             if self.debug:
-                logging.debug("Agent {}: Move North".format(a_id))
+                logging.debug(f"Agent {a_id}: Move North")
 
         elif action == 3:
             # move south
@@ -807,7 +805,7 @@ class SMACv2EnvCore:
             )
             self.new_unit_positions[a_id] = np.array([x, y - self._move_amount])
             if self.debug:
-                logging.debug("Agent {}: Move South".format(a_id))
+                logging.debug(f"Agent {a_id}: Move South")
 
         elif action == 4:
             # move east
@@ -820,7 +818,7 @@ class SMACv2EnvCore:
             self.new_unit_positions[a_id] = np.array([x + self._move_amount, y])
 
             if self.debug:
-                logging.debug("Agent {}: Move East".format(a_id))
+                logging.debug(f"Agent {a_id}: Move East")
 
         elif action == 5:
             # move west
@@ -832,7 +830,7 @@ class SMACv2EnvCore:
             )
             self.new_unit_positions[a_id] = np.array([x - self._move_amount, y])
             if self.debug:
-                logging.debug("Agent {}: Move West".format(a_id))
+                logging.debug(f"Agent {a_id}: Move West")
         elif self.conic_fov and action in range(6, 6 + self.n_fov_actions):
             self.fov_directions[a_id] = self.canonical_fov_directions[action - 6]
             cmd = None
@@ -869,7 +867,7 @@ class SMACv2EnvCore:
                 return None
 
             if self.debug:
-                logging.debug("Agent {} {}s unit # {}".format(a_id, action_name, target_id))
+                logging.debug(f"Agent {a_id} {action_name}s unit # {target_id}")
         if cmd:
             sc_action = sc_pb.Action(action_raw=r_pb.ActionRaw(unit_command=cmd))
             return sc_action
@@ -1622,12 +1620,12 @@ class SMACv2EnvCore:
                 agent_obs = np.concatenate((agent_obs, agent_id_feats.flatten()))
 
         if self.debug:
-            logging.debug("Obs Agent: {}".format(agent_id).center(60, "-"))
-            logging.debug("Avail. actions {}".format(self.get_avail_agent_actions(agent_id)))
-            logging.debug("Move feats {}".format(move_feats))
-            logging.debug("Enemy feats {}".format(enemy_feats))
-            logging.debug("Ally feats {}".format(ally_feats))
-            logging.debug("Own feats {}".format(own_feats))
+            logging.debug(f"Obs Agent: {agent_id}".center(60, "-"))
+            logging.debug(f"Avail. actions {self.get_avail_agent_actions(agent_id)}")
+            logging.debug(f"Move feats {move_feats}")
+            logging.debug(f"Enemy feats {enemy_feats}")
+            logging.debug(f"Ally feats {ally_feats}")
+            logging.debug(f"Own feats {own_feats}")
 
         return agent_obs
 
@@ -1818,12 +1816,12 @@ class SMACv2EnvCore:
             state = np.append(state, self._episode_steps / self.episode_limit)
 
         if self.debug:
-            logging.debug("Obs Agent: {}".format(agent_id).center(60, "-"))
-            logging.debug("Avail. actions {}".format(self.get_avail_agent_actions(agent_id)))
-            logging.debug("Move feats {}".format(move_feats))
-            logging.debug("Enemy feats {}".format(enemy_feats))
-            logging.debug("Ally feats {}".format(ally_feats))
-            logging.debug("Own feats {}".format(own_feats))
+            logging.debug(f"Obs Agent: {agent_id}".center(60, "-"))
+            logging.debug(f"Avail. actions {self.get_avail_agent_actions(agent_id)}")
+            logging.debug(f"Move feats {move_feats}")
+            logging.debug(f"Enemy feats {enemy_feats}")
+            logging.debug(f"Ally feats {ally_feats}")
+            logging.debug(f"Own feats {own_feats}")
 
         return state
 
@@ -1888,7 +1886,7 @@ class SMACv2EnvCore:
             logging.debug("Ally state {}".format(state_dict["allies"]))
             logging.debug("Enemy state {}".format(state_dict["enemies"]))
             if self.state_last_action:
-                logging.debug("Last actions {}".format(self.last_action))
+                logging.debug(f"Last actions {self.last_action}")
 
         return state
 

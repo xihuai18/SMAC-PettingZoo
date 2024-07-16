@@ -49,7 +49,7 @@ class ParallelEnv(co_mas.env.ParallelEnv):
     def _init_agents(self):
         self.agents: List[str] = []
 
-        agent_type_count: Dict[str, int] = defaultdict(lambda: 0)
+        agent_type_count: Dict[str, int] = defaultdict(int)
 
         for agent_id in range(self._env.n_agents):
             agent_info = self._env.agents[agent_id]

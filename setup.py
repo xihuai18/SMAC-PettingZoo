@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from setuptools import find_packages, setup
 
 description = """SMAC-PettingZoo - Latest StarCraft Multi-Agent Challenge. The origin environment can be found at https://github.com/oxwhirl/smac.git and https://github.com/oxwhirl/smacv2.git."""
