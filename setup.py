@@ -19,10 +19,9 @@ setup(
         "pygame>=2.0.0",
         "pettingzoo>=1.24.3",
         "gymnasium",
+        "pre-commit",
         "smac @ git+https://github.com/oxwhirl/smac.git",
         "smacv2 @ git+https://github.com/oxwhirl/smacv2.git",
-        "co_mas @ git+https://github.com/xihuai18/Common-Multi-agent-Environments.git",
-        "pre-commit",
         "loguru",
     ],
 )
