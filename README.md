@@ -4,31 +4,14 @@ We wrap [SMAC](https://github.com/oxwhirl/smac) and [SMACv2](https://github.com/
 
 Note that we include the modifications of SMAC and SMACv2 in [MAPPO](https://github.com/marlbenchmark/on-policy/tree/main) for reproducing the SOTA results. 
 
-## Modifications in Game Mechanism
+**Modifications in Game Mechanism**
 
 - **Suppressing Annoying outputs from PySC2.**
 - Fully control the randomness in SMACv2.
 - Fix SMACv1 reward hacking, following https://github.com/oxwhirl/smac/pull/76.
 
 
-## Installation
-
-### PyPi from sources
-
-```shell
-pip install git+https://github.com/xihuai18/SMAC-PettingZoo.git
-```
-
-### Install from GitHub source
-
-```shell
-git clone https://github.com/xihuai18/SMAC-PettingZoo.git
-cd SMAC-PettingZoo
-pip install -r requirements.txt
-pip install .
-```
-
-## Example
+**Example**
 
 ```python
 from co_mas.test import sample_action
