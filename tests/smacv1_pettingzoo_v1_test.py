@@ -20,7 +20,6 @@ while True and ep_i < 20:
     ep_i += 1
     if any(truncated.values()):
         break
-
 env.close()
 
 parallel_api_test(env, 400, agent_state=True)
