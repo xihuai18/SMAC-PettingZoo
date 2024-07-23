@@ -11,7 +11,7 @@ setup(
     keywords="StarCraft, PettingZoo, Multi-Agent Reinforcement Learning",
     packages=find_packages(),
     install_requires=[
-        "pysc2 @ git+https://github.com/xihuai18/pysc2.git",
+        "pysc2 @ git+https://github.com/google-deepmind/pysc2.git",
         "protobuf<3.21",
         "s2clientprotocol>=4.10.1.75800.0",
         "absl-py>=0.1.0",
